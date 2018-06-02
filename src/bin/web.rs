@@ -118,7 +118,7 @@ struct Config {
     #[structopt(long = "host", short = "h", default_value = "0.0.0.0")]
     pub host: String,
     /// Port to listen on
-    #[structopt(long = "port", short = "p", default_value = "7878")]
+    #[structopt(env = "PORT", long = "port", short = "p", default_value = "7878")]
     pub port: u16,
 }
 
