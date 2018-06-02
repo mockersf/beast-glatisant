@@ -10,12 +10,10 @@ path = "src/lib.rs"
 [[bin]]
 name = "beast_glatisant_cli"
 path = "src/bin/cli.rs"
-required-features = ["cli"]
 
 [[bin]]
 name = "beast_glatisant_web"
 path = "src/bin/web.rs"
-required-features = ["web"]
 
 [dependencies]
 reqwest = "0.8"
@@ -29,11 +27,5 @@ lazy_static = "1.0"
 comrak = "0.2"
 linkify = "0.3"
 
-structopt = { version = "0.2", optional = true }
-
-actix-web = { version = "0.6.10", optional = true }
-
-
-[features]
-cli = [ "structopt" ]
-web = [ "actix-web", "structopt" ]
+structopt = "0.2"
+actix-web = "0.6"
