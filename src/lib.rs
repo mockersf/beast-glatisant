@@ -1,9 +1,16 @@
 #[macro_use]
+extern crate log;
+
+#[macro_use]
 extern crate serde_derive;
 extern crate serde;
 extern crate serde_json;
+extern crate serde_urlencoded;
 
-extern crate reqwest;
+extern crate actix_web;
+extern crate failure;
+extern crate futures;
+extern crate http;
 
 #[macro_use]
 extern crate lazy_static;
@@ -11,18 +18,6 @@ extern crate lazy_static;
 extern crate comrak;
 extern crate linkify;
 
-use std::sync::Mutex;
-
 pub mod github;
 pub mod markdown;
 pub mod playground;
-
-lazy_static! {
-    static ref CLIENT: Mutex<reqwest::Client> = {
-        Mutex::new(
-            reqwest::Client::builder()
-                .build()
-                .expect("able to build reqwest client"),
-        )
-    };
-}

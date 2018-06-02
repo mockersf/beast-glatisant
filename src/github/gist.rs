@@ -2,6 +2,9 @@ use std::collections::HashMap;
 use std::ops::Deref;
 use std::sync::RwLock;
 
+use failure;
+use futures::future::Future;
+
 lazy_static! {
     static ref GIST_CACHE: RwLock<HashMap<super::ETag, Gist>> = { RwLock::new(HashMap::new()) };
 }
@@ -23,7 +26,10 @@ pub struct Gist {
     pub files: HashMap<String, File>,
 }
 
-pub fn get_gist(gist_id: &str, token: Option<String>) -> Option<Gist> {
+pub fn get_gist(
+    gist_id: &str,
+    token: Option<String>,
+) -> Box<Future<Item = Gist, Error = failure::Error>> {
     super::get_object(
         &format!("https://api.github.com/gists/{}", gist_id),
         token,

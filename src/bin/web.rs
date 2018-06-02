@@ -1,14 +1,21 @@
+extern crate env_logger;
+#[macro_use]
+extern crate log;
+
 extern crate actix_web;
 #[macro_use]
 extern crate structopt;
 #[macro_use]
 extern crate serde_derive;
+extern crate failure;
+extern crate futures;
 
 extern crate beast_glatisant;
 
 use std::iter;
 
-use actix_web::{http, server, App, HttpMessage, HttpRequest, Json, Path, Responder};
+use actix_web::{http, middleware, server, App, HttpMessage, HttpRequest, HttpResponse, Path};
+use futures::future::{self, Future};
 use structopt::StructOpt;
 
 #[derive(Deserialize, Debug, Hash, Eq, PartialEq)]
@@ -16,13 +23,6 @@ struct IssueDesignation {
     owner: String,
     repo: String,
     issue: u32,
-}
-
-#[derive(Serialize, Debug)]
-enum Response {
-    Issue(beast_glatisant::github::issue::Issue),
-    CodeAndClippy(Vec<CodeAndClippy>),
-    Error { msg: String },
 }
 
 #[derive(Serialize, Debug, Clone)]
@@ -49,66 +49,75 @@ fn extract_token(req: HttpRequest) -> Option<String> {
         })
 }
 
-fn issue(info: (Path<IssueDesignation>, HttpRequest)) -> impl Responder {
+fn issue(
+    info: (Path<IssueDesignation>, HttpRequest),
+) -> impl Future<Item = HttpResponse, Error = failure::Error> {
     let token = extract_token(info.1);
-    if let Some(issue) =
-        beast_glatisant::github::issue::get_issue(&info.0.owner, &info.0.repo, info.0.issue, token)
-    {
-        Json(Response::Issue(issue))
-    } else {
-        Json(Response::Error {
-            msg: "no issue matching request".to_string(),
-        })
-    }
+    beast_glatisant::github::issue::get_issue(&info.0.owner, &info.0.repo, info.0.issue, token)
+        .map(|issue| HttpResponse::Ok().json(issue))
 }
 
-fn clippied(info: (Path<IssueDesignation>, HttpRequest)) -> impl Responder {
-    let token = extract_token(info.1);
-    if let Some(issue) = beast_glatisant::github::issue::get_issue(
+fn clippied(
+    info: (Path<IssueDesignation>, HttpRequest),
+) -> impl Future<Item = HttpResponse, Error = failure::Error> {
+    let token = extract_token(info.1.clone());
+    let token2 = token.clone();
+    beast_glatisant::github::issue::get_issue(
         &info.0.owner,
         &info.0.repo,
         info.0.issue,
         token.clone(),
-    ) {
-        let a: Vec<Vec<CodeAndClippy>> = iter::once((&issue.html_url, &issue.body))
-            .chain(
-                beast_glatisant::github::issue::get_comments(
-                    &info.0.owner,
-                    &info.0.repo,
-                    info.0.issue,
-                    token.clone(),
-                ).expect("getting comments of issue")
-                    .iter()
-                    .map(|comment| (&comment.html_url, &comment.body)),
-            )
-            .map(|(from, text)| {
-                beast_glatisant::markdown::get_code_samples(&text.clone(), token.clone())
-                    .iter()
-                    .map(move |code_block| CodeAndClippy {
-                        from: from.to_string(),
-                        code: code_block.code.clone(),
-                        clippy: if is_rust(&code_block.code) {
-                            Some(
-                                beast_glatisant::playground::ask_playground_simpl(
-                                    &code_block.code,
-                                    beast_glatisant::playground::Action::Clippy,
-                                ).to_string(),
-                            )
-                        } else {
-                            None
-                        },
-                    })
-                    .collect::<Vec<_>>()
-            })
-            .collect();
-        Json(Response::CodeAndClippy(
-            a.iter().flat_map(|x| x.iter().cloned()).collect(),
-        ))
-    } else {
-        Json(Response::Error {
-            msg: "no issue matching request".to_string(),
+    ).and_then(move |issue| {
+        beast_glatisant::github::issue::get_comments(
+            &info.0.owner,
+            &info.0.repo,
+            info.0.issue,
+            token.clone(),
+        ).map(move |comments| {
+            iter::once((issue.html_url, issue.body))
+                .chain(
+                    comments
+                        .iter()
+                        .map(|comment| (comment.html_url.clone(), comment.body.clone())),
+                )
+                .collect()
         })
-    }
+    })
+        .and_then(move |issue_and_comments: Vec<(String, String)>| {
+            future::join_all(
+                issue_and_comments
+                    .iter()
+                    .map(move |(from, text)| {
+                        let from = from.clone();
+                        beast_glatisant::markdown::get_code_samples(&text.clone(), token2.clone())
+                            .map(move |code_blocks| {
+                                code_blocks
+                                    .iter()
+                                    .map(|code_block| (from.clone(), code_block.clone()))
+                                    .collect::<Vec<(String, beast_glatisant::markdown::Code)>>()
+                            })
+                    })
+                    .collect::<Vec<_>>(),
+            )
+        })
+        .and_then(|code_blocks| {
+            future::join_all(
+                code_blocks
+                    .iter()
+                    .flat_map(|cbs| cbs)
+                    .map(move |(from, cb)| {
+                        let cb = cb.clone();
+                        let from = from.clone();
+                        clippy_if_rust(&cb.code.clone()).map(|clippy| CodeAndClippy {
+                            from: from,
+                            code: cb.code,
+                            clippy: clippy,
+                        })
+                    })
+                    .collect::<Vec<_>>(),
+            )
+        })
+        .map(|code_blocks| HttpResponse::Ok().json(code_blocks))
 }
 
 #[derive(StructOpt, Debug)]
@@ -123,18 +132,21 @@ struct Config {
 }
 
 fn main() {
+    env_logger::init();
+
     let config = Config::from_args();
 
     let addr = format!("{}:{}", config.host, config.port);
-    println!("listening on http://{}", addr);
+    info!("listening on http://{}", addr);
     server::new(|| {
         App::new()
-            .route("/{owner}/{repo}/issues/{issue}", http::Method::GET, issue)
-            .route(
-                "/{owner}/{repo}/issues/{issue}/clippy",
-                http::Method::GET,
-                clippied,
-            )
+            .middleware(middleware::Logger::default())
+            .resource("/{owner}/{repo}/issues/{issue}", |r| {
+                r.method(http::Method::GET).with_async(issue)
+            })
+            .resource("/{owner}/{repo}/issues/{issue}/clippy", |r| {
+                r.method(http::Method::GET).with_async(clippied)
+            })
     }).bind(&addr)
         .unwrap()
         .run();
@@ -142,4 +154,17 @@ fn main() {
 
 fn is_rust(code: &str) -> bool {
     !code.contains("for further information visit https://rust-lang-nursery.github.io/rust-clippy")
+}
+
+fn clippy_if_rust(code: &str) -> Box<Future<Item = Option<String>, Error = failure::Error>> {
+    if is_rust(code) {
+        Box::new(
+            beast_glatisant::playground::ask_playground_simpl(
+                code,
+                beast_glatisant::playground::Action::Clippy,
+            ).map(|v| Some(v)),
+        )
+    } else {
+        Box::new(future::ok(None))
+    }
 }

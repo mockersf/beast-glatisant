@@ -1,3 +1,8 @@
+use actix_web::{client, HttpMessage};
+use failure;
+use futures::future::Future;
+use std::time::Duration;
+
 #[derive(Serialize, Debug, PartialEq, Clone, Copy)]
 #[serde(rename_all = "camelCase")]
 pub enum Action {
@@ -57,25 +62,29 @@ pub struct Response {
     code: Option<String>,
 }
 
-pub fn ask_playground(code: &str, action: Action) -> Response {
-    let client = ::CLIENT.lock().unwrap();
-
-    client
-        .post(match action {
-            Action::Run => "https://play.rust-lang.org/execute",
-            Action::Test => "https://play.rust-lang.org/execute",
-            Action::Clippy => "https://play.rust-lang.org/clippy",
-            Action::Format => "https://play.rust-lang.org/format",
-        })
+pub fn ask_playground(
+    code: &str,
+    action: Action,
+) -> impl Future<Item = Response, Error = failure::Error> {
+    debug!("calling playground for {:?}", action);
+    client::post(match action {
+        Action::Run => "https://play.rust-lang.org/execute",
+        Action::Test => "https://play.rust-lang.org/execute",
+        Action::Clippy => "https://play.rust-lang.org/clippy",
+        Action::Format => "https://play.rust-lang.org/format",
+    }).timeout(Duration::new(30, 0))
         .json(&Query::from(&action, code))
+        .unwrap()
         .send()
-        .expect("able to query playground")
-        .json()
-        .expect("playground response is not an error")
+        .map_err(|err| err.into())
+        .and_then(|resp| resp.json().map_err(|err| err.into()))
 }
 
-pub fn ask_playground_simpl(code: &str, action: Action) -> String {
-    match (action, ask_playground(code, action)) {
+pub fn ask_playground_simpl(
+    code: &str,
+    action: Action,
+) -> impl Future<Item = String, Error = failure::Error> {
+    ask_playground(code, action).map(move |playground| match (action, playground) {
         (
             _,
             Response {
@@ -84,17 +93,13 @@ pub fn ask_playground_simpl(code: &str, action: Action) -> String {
                 ..
             },
         ) => stderr,
-        (Action::Clippy, Response { stderr, .. }) => {
-            // let first_line = stderr.find('\n').map(|n| n + 1).unwrap_or(0);
-            // stderr.split_off(first_line)
-            stderr
-                .split('\n')
-                .skip(1)
-                .take_while(|line| !line.contains("Finished dev"))
-                .map(|line| format!("{}\n", line))
-                .collect::<Vec<String>>()
-                .concat()
-        }
+        (Action::Clippy, Response { stderr, .. }) => stderr
+            .split('\n')
+            .skip(1)
+            .take_while(|line| !line.contains("Finished dev"))
+            .map(|line| format!("{}\n", line))
+            .collect::<Vec<String>>()
+            .concat(),
         (
             Action::Format,
             Response {
@@ -102,5 +107,5 @@ pub fn ask_playground_simpl(code: &str, action: Action) -> String {
             },
         ) => code,
         (_, Response { stdout, .. }) => stdout,
-    }
+    })
 }

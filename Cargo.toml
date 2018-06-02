@@ -7,20 +7,27 @@ authors = ["François Mockers <mockersf@gmail.com>"]
 name = "beast_glatisant"
 path = "src/lib.rs"
 
-[[bin]]
-name = "beast_glatisant_cli"
-path = "src/bin/cli.rs"
+# [[bin]]
+# name = "beast_glatisant_cli"
+# path = "src/bin/cli.rs"
 
 [[bin]]
 name = "beast_glatisant_web"
 path = "src/bin/web.rs"
 
 [dependencies]
+log = "0.4"
+env_logger = "0.5"
+
 reqwest = "0.8"
+http = "0.1"
+futures = "0.1"
+failure = "0.1"
 
 serde = "1.0"
 serde_derive = "1.0"
 serde_json = "1.0"
+serde_urlencoded = "0.5"
 
 lazy_static = "1.0"
 
@@ -28,4 +35,5 @@ comrak = "0.2"
 linkify = "0.3"
 
 structopt = "0.2"
-actix-web = "0.6"
+actix-web = { version = "0.6", features = ["alpn"] }
+# actix-web = "0.6"
