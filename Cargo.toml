@@ -1,0 +1,39 @@
+[package]
+name = "beast_glatisant"
+version = "0.1.0"
+authors = ["François Mockers <mockersf@gmail.com>"]
+
+[lib]
+name = "beast_glatisant"
+path = "src/lib.rs"
+
+[[bin]]
+name = "beast_glatisant_cli"
+path = "src/bin/cli.rs"
+required-features = ["cli"]
+
+[[bin]]
+name = "beast_glatisant_web"
+path = "src/bin/web.rs"
+required-features = ["web"]
+
+[dependencies]
+reqwest = "0.8"
+
+serde = "1.0"
+serde_derive = "1.0"
+serde_json = "1.0"
+
+lazy_static = "1.0"
+
+comrak = "0.2"
+linkify = "0.3"
+
+structopt = { version = "0.2", optional = true }
+
+actix-web = { version = "0.6.10", optional = true }
+
+
+[features]
+cli = [ "structopt" ]
+web = [ "actix-web", "structopt" ]
