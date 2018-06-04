@@ -12,6 +12,7 @@ use github;
 pub struct Code {
     pub code: String,
     pub gist_id: Option<String>,
+    pub language: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -40,6 +41,7 @@ pub fn get_code_samples(
                     code_blocks.push(Box::new(future::ok(Code {
                         code: code_block,
                         gist_id: None,
+                        language: String::from_utf8(code.info.clone()).ok(),
                     })));
                 }
             }
@@ -53,12 +55,11 @@ pub fn get_code_samples(
                             {
                                 let code =
                                     github::gist::get_gist(&query_params.gist, token.clone())
-                                        .map(|gist| {
-                                            gist.files.values().next().unwrap().content.clone()
-                                        })
-                                        .map(|code| Code {
-                                            code: code,
+                                        .map(|gist| gist.files.values().next().unwrap().clone())
+                                        .map(|file| Code {
+                                            code: file.content,
                                             gist_id: Some(query_params.gist),
+                                            language: file.language,
                                         });
                                 code_blocks.push(Box::new(code));
                             }
@@ -78,12 +79,11 @@ pub fn get_code_samples(
                             {
                                 let code =
                                     github::gist::get_gist(&query_params.gist, token.clone())
-                                        .map(|gist| {
-                                            gist.files.values().next().unwrap().content.clone()
-                                        })
-                                        .map(|code| Code {
-                                            code: code,
+                                        .map(|gist| gist.files.values().next().unwrap().clone())
+                                        .map(|file| Code {
+                                            code: file.content,
                                             gist_id: Some(query_params.gist),
+                                            language: file.language,
                                         });
                                 code_blocks.push(Box::new(code));
                             }

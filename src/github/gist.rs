@@ -13,6 +13,7 @@ lazy_static! {
 pub struct File {
     pub filename: String,
     pub content: String,
+    pub language: Option<String>,
 }
 
 #[derive(Deserialize, Debug, Clone)]

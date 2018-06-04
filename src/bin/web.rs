@@ -108,7 +108,7 @@ fn clippied(
                     .map(move |(from, cb)| {
                         let cb = cb.clone();
                         let from = from.clone();
-                        clippy_if_rust(&cb.code.clone()).map(|clippy| CodeAndClippy {
+                        clippy_if_rust(&cb).map(|clippy| CodeAndClippy {
                             from: from,
                             code: cb.code,
                             clippy: clippy,
@@ -152,15 +152,21 @@ fn main() {
         .run();
 }
 
-fn is_rust(code: &str) -> bool {
-    !code.contains("for further information visit https://rust-lang-nursery.github.io/rust-clippy")
+fn is_rust(code: &beast_glatisant::markdown::Code) -> bool {
+    if let Some(ref language) = code.language {
+        language.to_ascii_lowercase() == "rust"
+    } else {
+        false
+    }
 }
 
-fn clippy_if_rust(code: &str) -> Box<Future<Item = Option<String>, Error = failure::Error>> {
+fn clippy_if_rust(
+    code: &beast_glatisant::markdown::Code,
+) -> Box<Future<Item = Option<String>, Error = failure::Error>> {
     if is_rust(code) {
         Box::new(
             beast_glatisant::playground::ask_playground_simpl(
-                code,
+                &code.code,
                 beast_glatisant::playground::Action::Clippy,
             ).map(|v| Some(v)),
         )
