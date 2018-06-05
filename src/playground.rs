@@ -43,9 +43,9 @@ struct Query {
     test: bool,
 }
 impl Query {
-    fn from(action: &Action, code: &str) -> Self {
+    fn from(action: &Action, code: String) -> Self {
         Query {
-            code: code.to_string(),
+            code: code,
             channel: Channel::Stable,
             mode: Mode::Debug,
             test: *action == Action::Test,
