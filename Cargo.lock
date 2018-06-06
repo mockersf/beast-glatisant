@@ -176,6 +176,7 @@ name = "beast_glatisant"
 version = "0.1.0"
 dependencies = [
  "actix-web 0.6.10 (registry+https://github.com/rust-lang/crates.io-index)",
+ "chrono 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "comrak 0.2.12 (registry+https://github.com/rust-lang/crates.io-index)",
  "env_logger 0.5.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "failure 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -265,6 +266,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 name = "cfg-if"
 version = "0.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "chrono"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "num-integer 0.1.38 (registry+https://github.com/rust-lang/crates.io-index)",
+ "num-traits 0.2.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.64 (registry+https://github.com/rust-lang/crates.io-index)",
+ "time 0.1.40 (registry+https://github.com/rust-lang/crates.io-index)",
+]
 
 [[package]]
 name = "clap"
@@ -934,6 +946,19 @@ dependencies = [
 [[package]]
 name = "nodrop"
 version = "0.1.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "num-integer"
+version = "0.1.38"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "num-traits 0.2.4 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "num-traits"
+version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
@@ -2033,6 +2058,7 @@ dependencies = [
 "checksum cargo_metadata 0.5.5 (registry+https://github.com/rust-lang/crates.io-index)" = "692a7aaca96b85973d7d92c5f633d75a399760ee61977db480ffdeadd497cbd2"
 "checksum cc 1.0.17 (registry+https://github.com/rust-lang/crates.io-index)" = "49ec142f5768efb5b7622aebc3fdbdbb8950a4b9ba996393cb76ef7466e8747d"
 "checksum cfg-if 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)" = "405216fd8fe65f718daa7102ea808a946b6ce40c742998fbfd3463645552de18"
+"checksum chrono 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)" = "1cce36c92cb605414e9b824f866f5babe0a0368e39ea07393b9b63cf3844c0e6"
 "checksum clap 2.31.2 (registry+https://github.com/rust-lang/crates.io-index)" = "f0f16b89cbb9ee36d87483dc939fe9f1e13c05898d56d7b230a0d4dff033a536"
 "checksum comrak 0.2.12 (registry+https://github.com/rust-lang/crates.io-index)" = "053b26c8ce23b4c505a9479beace98f95899e0bf5c5255cf0219e9b0f48cf6ea"
 "checksum cookie 0.10.1 (registry+https://github.com/rust-lang/crates.io-index)" = "746858cae4eae40fff37e1998320068df317bc247dc91a67c6cfa053afdc2abb"
@@ -2110,6 +2136,8 @@ dependencies = [
 "checksum native-tls 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)" = "f74dbadc8b43df7864539cedb7bc91345e532fdd913cfdc23ad94f4d2d40fbc0"
 "checksum net2 0.2.32 (registry+https://github.com/rust-lang/crates.io-index)" = "9044faf1413a1057267be51b5afba8eb1090bd2231c693664aa1db716fe1eae0"
 "checksum nodrop 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)" = "9a2228dca57108069a5262f2ed8bd2e82496d2e074a06d1ccc7ce1687b6ae0a2"
+"checksum num-integer 0.1.38 (registry+https://github.com/rust-lang/crates.io-index)" = "6ac0ea58d64a89d9d6b7688031b3be9358d6c919badcf7fbb0527ccfd891ee45"
+"checksum num-traits 0.2.4 (registry+https://github.com/rust-lang/crates.io-index)" = "775393e285254d2f5004596d69bb8bc1149754570dcc08cf30cabeba67955e28"
 "checksum num_cpus 1.8.0 (registry+https://github.com/rust-lang/crates.io-index)" = "c51a3322e4bca9d212ad9a158a02abc6934d005490c054a2778df73a70aa0a30"
 "checksum openssl 0.10.8 (registry+https://github.com/rust-lang/crates.io-index)" = "736898acffb0e00a14d86c5b836aee2ca1c502efcf1c1b0d17a936dfc49ec47f"
 "checksum openssl 0.9.24 (registry+https://github.com/rust-lang/crates.io-index)" = "a3605c298474a3aa69de92d21139fb5e2a81688d308262359d85cdd0d12a7985"

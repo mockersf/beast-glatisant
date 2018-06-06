@@ -10,6 +10,7 @@ use http::{header::{AUTHORIZATION, ETAG, IF_NONE_MATCH, USER_AGENT},
 use serde::Deserialize;
 
 pub mod gist;
+pub mod graphql_issue_list;
 pub mod issue;
 
 #[derive(PartialEq, Eq, Hash, Clone)]
