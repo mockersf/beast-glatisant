@@ -1,0 +1,28 @@
+language: rust
+
+cache: cargo
+
+rust:
+  - stable
+  - nightly
+
+matrix:
+  allow_failures:
+    - rust: nightly
+    - env: CARGO-TRAVIS
+  fast_finish: true
+  include:
+  - rust: stable
+    env: RUSTFMT
+    install:
+      - rustup component add rustfmt-preview
+    script:
+      - cargo fmt -- --write-mode=diff
+  - rust: nightly
+    env: CLIPPY
+    install:
+      - cargo install cargo-update || echo "cargo-update already installed"
+      - cargo install clippy || echo "cargo-clippy already installed"
+      - cargo install-update -a # update outdated cached binaries
+    script:
+      - cargo clippy -- -D clippy
