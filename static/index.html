@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<meta charset="utf-8" />
+<html>
+
+<head>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css" integrity="sha384-WskhaSGFgHYWDcbwN70/dfYBj47jz9qbsMId/iRN3ewGhXQFZCSftd1LZCfmhktB"
+        crossorigin="anonymous">
+    <style>
+        .loader {
+            animation: spin 2s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+    <script language="javascript" type="text/javascript">
+
+        function display_alert(msg) {
+            var alert = document.createElement("div");
+            alert.setAttribute("class", "alert alert-danger")
+            alert.setAttribute("role", "alert");
+            alert.appendChild(document.createTextNode(msg));
+            var element = document.getElementById("alerts");
+            element.appendChild(alert);
+        }
+
+        function clear_alerts() {
+            var element = document.getElementById("alerts");
+            while (element.children.length > 0) {
+                element.removeChild(element.children[0]);
+            }
+
+            var element = document.getElementById("results");
+            while (element.children.length > 0) {
+                element.removeChild(element.children[0]);
+            }
+        }
+
+        function get_fields(mandatory, optional) {
+            var missing = false;
+            var result = {};
+            for (i = 0; i < mandatory.length; i++) {
+                var field = mandatory[i];
+                var value = document.getElementById(field).value;
+                if (value === "") {
+                    missing = true;
+                    display_alert("missing " + field);
+                }
+                result[field] = value;
+            }
+            if (missing) {
+                return false;
+            }
+
+            for (i = 0; i < optional.length; i++) {
+                var field = optional[i];
+                var value = document.getElementById(field).value;
+                result[field] = value;
+            }
+
+            return result;
+        }
+
+        function start_loading() {
+            document.getElementById("get-issue").setAttribute("disabled", true);
+            document.getElementById("get-new").setAttribute("disabled", true);
+
+            document.getElementById("rust-logo").setAttribute("class", "loader");
+
+            percent = 90;
+            loading = true;
+            odd = false;
+            fun_load();
+            document.getElementById("fun-loader").style.display = "block";
+        }
+
+        var percent = 90;
+        var loading = false;
+        var odd = false;
+        function fun_load() {
+            const total = 300;
+            var current = total * percent / 100;
+            if (percent === 90) {
+                odd = !odd;
+            }
+            var current_suffix = odd ? "-odd" : "-even";
+            var other_suffix = !odd ? "-odd" : "-even";
+            document.getElementById("load" + current_suffix).style.display = "block";
+            document.getElementById("load" + other_suffix).style.display = "none";
+
+            document.getElementById("load-first" + current_suffix).style.width = current + "px";
+            document.getElementById("load-second" + current_suffix).style.width = (300 - current) + "px";
+            document.getElementById("load-second" + current_suffix).style.left = current + "px";
+            percent = percent - 0.5;
+            if (percent == 10) {
+                percent = 90;
+            }
+            if (loading) {
+                setTimeout(fun_load, 25);
+            }
+        }
+
+
+        function done_loading() {
+            document.getElementById("get-issue").removeAttribute("disabled");
+            document.getElementById("get-new").removeAttribute("disabled");
+
+            document.getElementById("rust-logo").removeAttribute("class");
+
+            loading = false;
+            document.getElementById("fun-loader").style.display = "none";
+        }
+
+        function get_data(url, token) {
+            start_loading();
+
+            var auth_header = new Headers();
+            if (token !== "") {
+                auth_header.append("authorization", "bearer " + token);
+            }
+
+            fetch(url, { headers: auth_header })
+                .then(function (response) {
+                    return response.json();
+                })
+                .then(function (json) {
+                    done_loading();
+                    display_results(json);
+                })
+                .catch(error => {
+                    done_loading();
+                    display_alert(error);
+                });
+
+        }
+
+        function get_issue() {
+            clear_alerts();
+            update_token();
+            var fields = get_fields(["owner", "repo", "issue"], ["token"]);
+            if (!fields) {
+                return false;
+            }
+
+            start_loading();
+            get_data(fields.owner + "/" + fields.repo + "/issues/" + fields.issue + "/clippy", fields.token);
+            return false;
+        }
+
+        function get_new() {
+            clear_alerts();
+            update_token();
+            var fields = get_fields(["owner", "repo", "token"], ["since"]);
+            if (!fields) {
+                return false;
+            }
+
+            var days = "";
+            if (fields.since !== "") {
+                days = "?days=" + fields.since;
+            }
+
+            start_loading();
+            get_data(fields.owner + "/" + fields.repo + "/issues/latest/clippy" + days, fields.token);
+            return false;
+        }
+
+        function display_results(json) {
+            var element = document.getElementById("results");
+
+            for (i = 0; i < json.length; i++) {
+                var header = document.createElement("div");
+                header.setAttribute("class", "d-flex justify-content-between card-header");
+                var from = document.createElement("a");
+                from.setAttribute("href", json[i].from);
+                from.setAttribute("target", "_blank");
+                from.appendChild(document.createTextNode(json[i].from));
+                var date = document.createElement("small");
+                date.appendChild(document.createTextNode(json[i].ts));
+                header.appendChild(from);
+                header.appendChild(date);
+
+                var body = document.createElement("div");
+                body.setAttribute("class", "card-body card-group");
+                body.appendChild(code_block("from comment", json[i].code));
+                body.appendChild(code_block("clippy", json[i].clippy));
+
+                var block = document.createElement("div");
+                block.setAttribute("class", "card mb-3")
+                block.appendChild(header);
+                block.appendChild(body);
+
+                element.appendChild(block);
+            }
+        }
+
+        function code_block(title, code) {
+            var block = document.createElement("div")
+            block.setAttribute("class", "card small")
+
+            var header = document.createElement("div");
+            header.setAttribute("class", "card-header");
+            header.setAttribute("style", "padding: 0.25rem 0.5rem;")
+            header.appendChild(document.createTextNode(title));
+
+            var body = document.createElement("div");
+            body.setAttribute("class", "card-body");
+            body.setAttribute("style", "padding: 0.5rem;")
+            var code_block = document.createElement("pre");
+            code_block.setAttribute("style", "margin-bottom: 0;")
+            code_block.appendChild(document.createTextNode(code));
+            body.appendChild(code_block);
+
+            block.appendChild(header);
+            block.appendChild(body);
+
+            return block;
+        }
+
+        function update_token() {
+            var token = document.getElementById("token").value;
+            var remember = document.getElementById("remember").checked;
+
+            if (remember) {
+                set_token_cookie(token);
+            } else {
+                clear_token_cookie();
+            }
+
+        }
+
+        function set_token_cookie(token) {
+            var cname = "github_token";
+            var cvalue = token;
+            var d = new Date();
+            d.setTime(d.getTime() + (21 * 24 * 60 * 60 * 1000));
+            var expires = "expires=" + d.toUTCString();
+            document.cookie = cname + "=" + cvalue + ";" + expires + ";path=/";
+        }
+        function clear_token_cookie() {
+            var cname = "github_token";
+            document.cookie = cname + "=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+        }
+        function get_token_cookie() {
+            var cname = "github_token";
+            var name = cname + "=";
+            var decodedCookie = decodeURIComponent(document.cookie);
+            var ca = decodedCookie.split(';');
+            for (var i = 0; i < ca.length; i++) {
+                var c = ca[i];
+                while (c.charAt(0) == ' ') {
+                    c = c.substring(1);
+                }
+                if (c.indexOf(name) == 0) {
+                    return c.substring(name.length, c.length);
+                }
+            }
+            return "";
+        }
+    </script>
+</head>
+
+<body>
+    <div class="jumbotron" style="padding: 1rem 2rem;">
+        <div style="display: flex; justify-content: space-between">
+            <div>
+                <h1 class="display-4">Github &#x2764; Playground</h1>
+                <p class="lead">Integration between github issues and playground.</p>
+                <p>
+                    <a href="http://github.com/mockersf/beast-glatisant" target="_blank">Fork me</a>,
+                    <a href="/about.html">about</a>
+                </p>
+            </div>
+            <img src="https://www.rust-lang.org/logos/rust-logo-blk.svg" style="transform: rotate(30deg);" id="rust-logo" />
+        </div>
+    </div>
+
+    <div style="margin: 0 1em">
+        <div style="display: flex">
+            <div class="input-group mb-2" style="margin-right: 1em">
+                <div class="input-group-prepend">
+                    <span class="input-group-text" id="label-owner">repo owner</span>
+                </div>
+                <input type="text" class="form-control" id="owner" aria-describedby="label-owner" value="rust-lang-nursery">
+            </div>
+            <div class="input-group mb-2" style="margin-left: 1em">
+                <div class="input-group-prepend">
+                    <span class="input-group-text" id="label-repo">repo name</span>
+                </div>
+                <input type="text" class="form-control" id="repo" aria-describedby="label-repo" value="rust-clippy">
+            </div>
+        </div>
+        <div class="input-group mb-2">
+            <div class="input-group-prepend">
+                <span class="input-group-text" id="label-token">Github token</span>
+            </div>
+            <input type="text" class="form-control" id="token" aria-describedby="label-token" onchange="update_token()">
+            <div class="input-group-append">
+                <div class="input-group-text">
+                    <span style="margin-right: 0.4rem">remember? </span>
+                    <input type="checkbox" aria-label="Remember the token" onchange="update_token()" id="remember">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <hr class="mb-3 mt-3" />
+
+    <div style="display: flex">
+
+        <div style="margin: 0 1em; width: 50%">
+            <form>
+                <label>Check an issue</label>
+                <div style="display: flex">
+                    <div class="input-group mb-2" style="width: 15em; margin-right: 2em">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text" id="label-issue">Issue Number</span>
+                        </div>
+                        <input type="text" class="form-control" id="issue" aria-describedby="label-issue">
+                    </div>
+                    <button type="submit" class="btn btn-primary mb-2" onclick="return get_issue()" id="get-issue">Get issue</button>
+                </div>
+            </form>
+        </div>
+
+        <div style="border: 0.5px solid lightgrey"></div>
+
+        <div style="margin: 0 1em; width: 50%">
+            <form>
+                <label>Check new issues and comments</label>
+                <div style="display: flex">
+                    <div class="input-group mb-2" style="width: 15em; margin-right: 2em">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text" id="label-since">Since (days)</span>
+                        </div>
+                        <input type="text" class="form-control" id="since" aria-describedby="label-since" placeholder="3">
+                    </div>
+                    <button type="submit" class="btn btn-primary mb-2" onclick="return get_new()" id="get-new">Get new comments</button>
+                </div>
+            </form>
+        </div>
+
+    </div>
+
+    <hr class="mb-4" />
+
+    <div style="margin: 0 1em" id="alerts"></div>
+
+    <div style="margin: 0 1em" id="results"></div>
+
+    <script language="javascript" type="text/javascript">
+        var token = get_token_cookie();
+        if (token !== "") {
+            document.getElementById("token").value = token;
+            document.getElementById("remember").checked = true;
+        }
+    </script>
+
+    <div id="fun-loader" style="width: 300px; position: relative; height: 300px; left: 50%; transform: translate(-50%); display: none;">
+        <div id="load-odd" style="display: none;">
+            <div style="overflow: hidden; position: absolute" id="load-first-odd">
+                <img src="https://assets-cdn.github.com/images/modules/logos_page/GitHub-Mark.png" style="height: 300px;" />
+            </div>
+            <div style="position: absolute; overflow: hidden; direction: rtl" id="load-second-odd">
+                <img src="https://www.rust-lang.org/logos/rust-logo-blk.svg" style="height: 300px;" />
+            </div>
+        </div>
+        <div id="load-even" style="display: none;">
+            <div style="position: absolute; overflow: hidden" id="load-first-even">
+                <img src="https://www.rust-lang.org/logos/rust-logo-blk.svg" style="height: 300px;" />
+            </div>
+            <div style="overflow: hidden; position: absolute; direction: rtl" id="load-second-even">
+                <img src="https://assets-cdn.github.com/images/modules/logos_page/GitHub-Mark.png" style="height: 300px;" />
+            </div>
+        </div>
+    </div>
+
+</body>
+
+</html>

@@ -17,7 +17,8 @@ extern crate beast_glatisant;
 
 use std::iter;
 
-use actix_web::{http, middleware, server, App, HttpMessage, HttpRequest, HttpResponse, Path, Query};
+use actix_web::{fs, http, middleware, server, App, HttpMessage, HttpRequest, HttpResponse, Path,
+                Query};
 use futures::future::{self, Future};
 use structopt::StructOpt;
 
@@ -78,7 +79,7 @@ fn extract_token(req: HttpRequest) -> Option<String> {
         })
 }
 
-fn clippied(
+fn get_issue(
     info: (Path<IssueDesignation>, HttpRequest),
 ) -> impl Future<Item = HttpResponse, Error = failure::Error> {
     let token = extract_token(info.1.clone());
@@ -225,8 +226,12 @@ fn main() {
                 r.method(http::Method::GET).with_async(repo_issues)
             })
             .resource("/{owner}/{repo}/issues/{issue}/{action}", |r| {
-                r.method(http::Method::GET).with_async(clippied)
+                r.method(http::Method::GET).with_async(get_issue)
             })
+            .handler(
+                "/",
+                fs::StaticFiles::new("./static/").index_file("index.html"),
+            )
     }).bind(&addr)
         .unwrap()
         .run();
