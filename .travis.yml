@@ -17,7 +17,7 @@ matrix:
     install:
       - rustup component add rustfmt-preview
     script:
-      - cargo fmt -- --write-mode=diff
+      - cargo fmt -- --check
   - rust: nightly
     env: CLIPPY
     install:
