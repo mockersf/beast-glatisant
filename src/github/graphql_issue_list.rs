@@ -107,7 +107,7 @@ pub fn graphql(
 }
 
 impl GraphQLReply {
-    pub fn to_list(self) -> Vec<Body> {
+    pub fn list(self) -> Vec<Body> {
         self.data
             .repository
             .issues

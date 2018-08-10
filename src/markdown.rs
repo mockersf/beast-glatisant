@@ -22,7 +22,7 @@ struct PlaygroundQueryParams {
 
 pub fn get_code_samples(
     doc: &str,
-    token: Option<String>,
+    token: &Option<String>,
 ) -> Box<Future<Item = Vec<Code>, Error = failure::Error>> {
     let arena = Arena::new();
 
@@ -33,10 +33,10 @@ pub fn get_code_samples(
     fn iter_nodes<'a>(
         node: &'a AstNode<'a>,
         code_blocks: &mut Vec<Box<Future<Item = Code, Error = failure::Error>>>,
-        token: Option<String>,
+        token: &Option<String>,
     ) {
         match &mut node.data.borrow_mut().value {
-            &mut NodeValue::CodeBlock(ref code) => {
+            NodeValue::CodeBlock(ref code) => {
                 if let Ok(code_block) = String::from_utf8(code.literal.clone()) {
                     code_blocks.push(Box::new(future::ok(Code {
                         code: code_block,
@@ -45,7 +45,7 @@ pub fn get_code_samples(
                     })));
                 }
             }
-            &mut NodeValue::Link(ref link) => {
+            NodeValue::Link(ref link) => {
                 if let Ok(link) = String::from_utf8(link.url.clone()) {
                     if let Ok(url) = link.parse::<Uri>() {
                         if url.host() == Some("play.rust-lang.org") {
@@ -67,7 +67,7 @@ pub fn get_code_samples(
                     }
                 }
             }
-            &mut NodeValue::Text(ref mut text) => {
+            NodeValue::Text(ref mut text) => {
                 let finder = LinkFinder::new();
                 let text = String::from_utf8(text.to_vec()).unwrap();
                 finder.links(&text).for_each(|link| {
@@ -93,12 +93,12 @@ pub fn get_code_samples(
             }
             _ => {
                 for c in node.children() {
-                    iter_nodes(c, code_blocks, token.clone());
+                    iter_nodes(c, code_blocks, token);
                 }
             }
         }
     }
-    iter_nodes(root, &mut code_blocks, token);
+    iter_nodes(root, &mut code_blocks, &token);
 
     Box::new(future::join_all(code_blocks))
 }

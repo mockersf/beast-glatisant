@@ -49,7 +49,7 @@ where
         match (cached_etag, resp.status()) {
             (Some(etag), StatusCode::NOT_MODIFIED) => {
                 debug!("retrieved {} from cache", key);
-                get_from_cache(etag, etag_cache)
+                get_from_cache(&etag, etag_cache)
             }
             (Some(old_etag), _) => {
                 debug!("updating {} in cache", key);
@@ -65,7 +65,7 @@ where
 }
 
 fn get_from_cache<T>(
-    etag: ETag,
+    etag: &ETag,
     cache: &RwLock<HashMap<ETag, T>>,
 ) -> Box<Future<Item = T, Error = failure::Error>>
 where

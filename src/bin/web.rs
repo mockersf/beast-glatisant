@@ -112,13 +112,14 @@ fn get_issue(
                     .iter()
                     .map(move |(from, text)| {
                         let from = from.clone();
-                        beast_glatisant::markdown::get_code_samples(&text.clone(), token2.clone())
-                            .map(move |code_blocks| {
+                        beast_glatisant::markdown::get_code_samples(&text.clone(), &token2).map(
+                            move |code_blocks| {
                                 code_blocks
                                     .iter()
                                     .map(|code_block| (from.clone(), code_block.clone()))
                                     .collect::<Vec<(String, beast_glatisant::markdown::Code)>>()
-                            })
+                            },
+                        )
                     })
                     .collect::<Vec<_>>(),
             )
@@ -154,7 +155,7 @@ fn repo_issues(
         &info.0.owner,
         &info.0.repo,
         &token.unwrap().clone(),
-    ).map(|response| response.to_list())
+    ).map(|response| response.list())
         .and_then(move |issue_and_comments| {
             future::join_all(
                 issue_and_comments
@@ -163,19 +164,17 @@ fn repo_issues(
                     .map(|comm| {
                         let url = comm.url.clone();
                         let update = comm.last_update.clone();
-                        beast_glatisant::markdown::get_code_samples(
-                            &comm.body.clone(),
-                            token2.clone(),
-                        ).map(move |code_blocks| {
-                            code_blocks
-                                .iter()
-                                .map(|code_block| (url.clone(), update, code_block.clone()))
-                                .collect::<Vec<(
-                                    String,
-                                    chrono::DateTime<Utc>,
-                                    beast_glatisant::markdown::Code,
-                                )>>()
-                        })
+                        beast_glatisant::markdown::get_code_samples(&comm.body.clone(), &token2)
+                            .map(move |code_blocks| {
+                                code_blocks
+                                    .iter()
+                                    .map(|code_block| (url.clone(), update, code_block.clone()))
+                                    .collect::<Vec<(
+                                        String,
+                                        chrono::DateTime<Utc>,
+                                        beast_glatisant::markdown::Code,
+                                    )>>()
+                            })
                     })
                     .collect::<Vec<_>>(),
             )

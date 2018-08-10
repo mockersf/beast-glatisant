@@ -43,12 +43,12 @@ struct Query {
     test: bool,
 }
 impl Query {
-    fn from(action: &Action, code: String) -> Self {
+    fn from(action: Action, code: String) -> Self {
         Query {
-            code: code,
+            code,
             channel: Channel::Stable,
             mode: Mode::Debug,
-            test: *action == Action::Test,
+            test: action == Action::Test,
             crate_type: CrateType::Bin,
         }
     }
@@ -73,7 +73,7 @@ pub fn ask_playground(
         Action::Clippy => "https://play.rust-lang.org/clippy",
         Action::Format => "https://play.rust-lang.org/format",
     }).timeout(Duration::new(30, 0))
-        .json(&Query::from(&action, wrap_in_main_if_not_present(code)))
+        .json(&Query::from(action, wrap_in_main_if_not_present(code)))
         .unwrap()
         .send()
         .map_err(|err| err.into())
