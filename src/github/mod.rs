@@ -1,12 +1,16 @@
 use std::collections::HashMap;
 use std::sync::RwLock;
 
-use actix_web::{client::{self, ClientResponse},
-                HttpMessage};
+use actix_web::{
+    client::{self, ClientResponse},
+    HttpMessage,
+};
 use failure;
 use futures::future::{self, Future};
-use http::{header::{AUTHORIZATION, ETAG, IF_NONE_MATCH, USER_AGENT},
-           StatusCode};
+use http::{
+    header::{AUTHORIZATION, ETAG, IF_NONE_MATCH, USER_AGENT},
+    StatusCode,
+};
 use serde::Deserialize;
 
 pub mod gist;
@@ -85,7 +89,8 @@ where
     for<'de> T: Deserialize<'de>,
     T: 'static,
 {
-    let new_etag = resp.headers()
+    let new_etag = resp
+        .headers()
         .get(ETAG)
         .map(|etag| ETag(etag.to_str().unwrap().to_string()));
     Box::new(

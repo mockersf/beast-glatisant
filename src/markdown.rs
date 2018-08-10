@@ -49,10 +49,10 @@ pub fn get_code_samples(
                 if let Ok(link) = String::from_utf8(link.url.clone()) {
                     if let Ok(url) = link.parse::<Uri>() {
                         if url.host() == Some("play.rust-lang.org") {
-                            if let Ok(query_params) = serde_urlencoded::from_str::<
-                                PlaygroundQueryParams,
-                            >(url.query().unwrap_or(""))
-                            {
+                            if let Ok(query_params) =
+                                serde_urlencoded::from_str::<PlaygroundQueryParams>(
+                                    url.query().unwrap_or(""),
+                                ) {
                                 let code =
                                     github::gist::get_gist(&query_params.gist, token.clone())
                                         .map(|gist| gist.files.values().next().unwrap().clone())
@@ -73,10 +73,10 @@ pub fn get_code_samples(
                 finder.links(&text).for_each(|link| {
                     if let Ok(url) = link.as_str().parse::<Uri>() {
                         if url.host() == Some("play.rust-lang.org") {
-                            if let Ok(query_params) = serde_urlencoded::from_str::<
-                                PlaygroundQueryParams,
-                            >(url.query().unwrap_or(""))
-                            {
+                            if let Ok(query_params) =
+                                serde_urlencoded::from_str::<PlaygroundQueryParams>(
+                                    url.query().unwrap_or(""),
+                                ) {
                                 let code =
                                     github::gist::get_gist(&query_params.gist, token.clone())
                                         .map(|gist| gist.files.values().next().unwrap().clone())

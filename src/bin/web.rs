@@ -17,8 +17,9 @@ extern crate beast_glatisant;
 
 use std::iter;
 
-use actix_web::{fs, http, middleware, server, App, HttpMessage, HttpRequest, HttpResponse, Path,
-                Query};
+use actix_web::{
+    fs, http, middleware, server, App, HttpMessage, HttpRequest, HttpResponse, Path, Query,
+};
 use futures::future::{self, Future};
 use structopt::StructOpt;
 
