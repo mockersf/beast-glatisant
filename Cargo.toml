@@ -36,5 +36,5 @@ comrak = "0.2"
 linkify = "0.3"
 
 structopt = "0.2"
-actix-web = { version = "0.6", features = ["alpn"] }
+actix-web = { version = "0.6.15", features = ["alpn"] }
 # actix-web = "0.6"
