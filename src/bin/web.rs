@@ -230,7 +230,9 @@ fn main() {
             })
             .handler(
                 "/",
-                fs::StaticFiles::new("./static/").index_file("index.html"),
+                fs::StaticFiles::new("./static/")
+                    .unwrap()
+                    .index_file("index.html"),
             )
     }).bind(&addr)
         .unwrap()
