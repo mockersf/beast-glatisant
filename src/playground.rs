@@ -73,11 +73,11 @@ pub fn ask_playground(
         Action::Clippy => "https://play.rust-lang.org/clippy",
         Action::Format => "https://play.rust-lang.org/format",
     }).timeout(Duration::new(30, 0))
-        .json(&Query::from(action, wrap_in_main_if_not_present(code)))
-        .unwrap()
-        .send()
-        .map_err(|err| err.into())
-        .and_then(|resp| resp.json().map_err(|err| err.into()))
+    .json(&Query::from(action, wrap_in_main_if_not_present(code)))
+    .unwrap()
+    .send()
+    .map_err(|err| err.into())
+    .and_then(|resp| resp.json().map_err(|err| err.into()))
 }
 
 fn wrap_in_main_if_not_present(code: &str) -> String {

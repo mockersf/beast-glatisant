@@ -101,7 +101,6 @@ where
                     cache.write().unwrap().insert(etag.clone(), object.clone());
                 }
                 object
-            })
-            .map_err(|err| err.into()),
+            }).map_err(|err| err.into()),
     )
 }

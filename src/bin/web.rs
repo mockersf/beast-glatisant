@@ -102,47 +102,41 @@ fn get_issue(
                     comments
                         .iter()
                         .map(|comment| (comment.html_url.clone(), comment.body.clone())),
-                )
-                .collect()
+                ).collect()
         })
-    })
-        .and_then(move |issue_and_comments: Vec<(String, String)>| {
-            future::join_all(
-                issue_and_comments
-                    .iter()
-                    .map(move |(from, text)| {
-                        let from = from.clone();
-                        beast_glatisant::markdown::get_code_samples(&text.clone(), &token2).map(
-                            move |code_blocks| {
-                                code_blocks
-                                    .iter()
-                                    .map(|code_block| (from.clone(), code_block.clone()))
-                                    .collect::<Vec<(String, beast_glatisant::markdown::Code)>>()
-                            },
-                        )
+    }).and_then(move |issue_and_comments: Vec<(String, String)>| {
+        future::join_all(
+            issue_and_comments
+                .iter()
+                .map(move |(from, text)| {
+                    let from = from.clone();
+                    beast_glatisant::markdown::get_code_samples(&text.clone(), &token2).map(
+                        move |code_blocks| {
+                            code_blocks
+                                .iter()
+                                .map(|code_block| (from.clone(), code_block.clone()))
+                                .collect::<Vec<(String, beast_glatisant::markdown::Code)>>()
+                        },
+                    )
+                }).collect::<Vec<_>>(),
+        )
+    }).and_then(|code_blocks| {
+        future::join_all(
+            code_blocks
+                .iter()
+                .flat_map(|cbs| cbs)
+                .map(move |(from, cb)| {
+                    let cb = cb.clone();
+                    let from = from.clone();
+                    clippy_if_rust(&cb).map(|clippy| CodeAndClippy {
+                        from: from,
+                        code: cb.code,
+                        clippy: clippy,
+                        ts: None,
                     })
-                    .collect::<Vec<_>>(),
-            )
-        })
-        .and_then(|code_blocks| {
-            future::join_all(
-                code_blocks
-                    .iter()
-                    .flat_map(|cbs| cbs)
-                    .map(move |(from, cb)| {
-                        let cb = cb.clone();
-                        let from = from.clone();
-                        clippy_if_rust(&cb).map(|clippy| CodeAndClippy {
-                            from: from,
-                            code: cb.code,
-                            clippy: clippy,
-                            ts: None,
-                        })
-                    })
-                    .collect::<Vec<_>>(),
-            )
-        })
-        .map(|code_blocks| HttpResponse::Ok().json(code_blocks))
+                }).collect::<Vec<_>>(),
+        )
+    }).map(|code_blocks| HttpResponse::Ok().json(code_blocks))
 }
 
 fn repo_issues(
@@ -156,49 +150,46 @@ fn repo_issues(
         &info.0.repo,
         &token.unwrap().clone(),
     ).map(|response| response.list())
-        .and_then(move |issue_and_comments| {
-            future::join_all(
-                issue_and_comments
-                    .iter()
-                    .filter(move |comm| comm.last_update.timestamp() > from_ts)
-                    .map(|comm| {
-                        let url = comm.url.clone();
-                        let update = comm.last_update.clone();
-                        beast_glatisant::markdown::get_code_samples(&comm.body.clone(), &token2)
-                            .map(move |code_blocks| {
-                                code_blocks
-                                    .iter()
-                                    .map(|code_block| (url.clone(), update, code_block.clone()))
-                                    .collect::<Vec<(
-                                        String,
-                                        chrono::DateTime<Utc>,
-                                        beast_glatisant::markdown::Code,
-                                    )>>()
-                            })
+    .and_then(move |issue_and_comments| {
+        future::join_all(
+            issue_and_comments
+                .iter()
+                .filter(move |comm| comm.last_update.timestamp() > from_ts)
+                .map(|comm| {
+                    let url = comm.url.clone();
+                    let update = comm.last_update.clone();
+                    beast_glatisant::markdown::get_code_samples(&comm.body.clone(), &token2).map(
+                        move |code_blocks| {
+                            code_blocks
+                                .iter()
+                                .map(|code_block| (url.clone(), update, code_block.clone()))
+                                .collect::<Vec<(
+                                    String,
+                                    chrono::DateTime<Utc>,
+                                    beast_glatisant::markdown::Code,
+                                )>>()
+                        },
+                    )
+                }).collect::<Vec<_>>(),
+        )
+    }).and_then(|code_blocks| {
+        future::join_all(
+            code_blocks
+                .iter()
+                .flat_map(|cbs| cbs)
+                .map(move |(from, updated_at, cb)| {
+                    let cb = cb.clone();
+                    let from = from.clone();
+                    let updated_at = updated_at.clone();
+                    clippy_if_rust(&cb).map(move |clippy| CodeAndClippy {
+                        from: from,
+                        code: cb.code,
+                        clippy: clippy,
+                        ts: Some(updated_at),
                     })
-                    .collect::<Vec<_>>(),
-            )
-        })
-        .and_then(|code_blocks| {
-            future::join_all(
-                code_blocks
-                    .iter()
-                    .flat_map(|cbs| cbs)
-                    .map(move |(from, updated_at, cb)| {
-                        let cb = cb.clone();
-                        let from = from.clone();
-                        let updated_at = updated_at.clone();
-                        clippy_if_rust(&cb).map(move |clippy| CodeAndClippy {
-                            from: from,
-                            code: cb.code,
-                            clippy: clippy,
-                            ts: Some(updated_at),
-                        })
-                    })
-                    .collect::<Vec<_>>(),
-            )
-        })
-        .map(|code_blocks| HttpResponse::Ok().json(code_blocks))
+                }).collect::<Vec<_>>(),
+        )
+    }).map(|code_blocks| HttpResponse::Ok().json(code_blocks))
 }
 
 #[derive(StructOpt, Debug)]
@@ -208,7 +199,12 @@ struct Config {
     #[structopt(long = "host", short = "h", default_value = "0.0.0.0")]
     pub host: String,
     /// Port to listen on
-    #[structopt(env = "PORT", long = "port", short = "p", default_value = "7878")]
+    #[structopt(
+        env = "PORT",
+        long = "port",
+        short = "p",
+        default_value = "7878"
+    )]
     pub port: u16,
 }
 
@@ -224,19 +220,17 @@ fn main() {
             .middleware(middleware::Logger::default())
             .resource("/{owner}/{repo}/issues/latest/{action}", |r| {
                 r.method(http::Method::GET).with_async(repo_issues)
-            })
-            .resource("/{owner}/{repo}/issues/{issue}/{action}", |r| {
+            }).resource("/{owner}/{repo}/issues/{issue}/{action}", |r| {
                 r.method(http::Method::GET).with_async(get_issue)
-            })
-            .handler(
+            }).handler(
                 "/",
                 fs::StaticFiles::new("./static/")
                     .unwrap()
                     .index_file("index.html"),
             )
     }).bind(&addr)
-        .unwrap()
-        .run();
+    .unwrap()
+    .run();
 }
 
 fn is_rust(code: &beast_glatisant::markdown::Code) -> bool {

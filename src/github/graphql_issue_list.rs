@@ -127,8 +127,7 @@ impl GraphQLReply {
                     ),
                     url: comment.url.clone(),
                 }))
-            })
-            .flat_map(|i| i)
+            }).flat_map(|i| i)
             .collect()
     }
 }
